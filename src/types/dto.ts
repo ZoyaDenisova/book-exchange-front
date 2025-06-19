@@ -31,27 +31,27 @@ export interface CreateListingDto {
 }
 
 export interface ListingDto {
-  id?: number;
-  bookId?: number;
-  bookTitle?: string;
-  bookAuthor?: string;
-  condition?: string;
-  cityId?: number;
-  cityName?: string;
-  imageUrls?: string[];
-  isOpen?: boolean;
-  isBlocked?: boolean;
-  ownerId?: number;
-  createdAt?: string;
+  id: number;
+  bookTitle: string;
+  bookAuthor: string;
+  bookDescription?: string;
+  condition: 'NEW' | 'LIKE_NEW' | 'GOOD' | 'FAIR' | 'POOR';
+  cityName: string;
+  imageUrls: string[];
+  isOpen: boolean;
+  isBlocked: boolean;
+  ownerId: number;
+  ownerName?: string;
+  ownerAvatar?: string;
+  createdAt: string;
 }
 
 export interface ListingFilterDto {
   title?: string;
   author?: string;
-  ageCategories?: string[];
   genreIds?: number[];
+  condition?: 'NEW' | 'LIKE_NEW' | 'GOOD' | 'FAIR' | 'POOR';
   cityId?: number;
-  condition?: string;
 }
 
 export interface PageListingDto {

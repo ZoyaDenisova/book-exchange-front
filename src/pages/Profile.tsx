@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
-import type {UserDto} from "@/types/dto.ts";
+import type { UserDto } from '@/types/dto.ts';
 import { cn } from '@/lib/utils';
-
+import { useParams, Link } from 'react-router-dom';
 
 interface Listing {
   id: number;
@@ -30,6 +30,9 @@ const PAGE_SIZE = 6;
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
+  const { userId: paramUserId } = useParams();
+  const userId = paramUserId ? Number(paramUserId) : user?.id;
+
   const [userData, setUserData] = useState<UserDto | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'listings' | 'wanted'>('listings');
@@ -40,54 +43,55 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     const fetchAll = async () => {
       setLoading(true);
       try {
         const [userRes, ratingRes] = await Promise.all([
-          api.get(`/api/auth/users/${user.id}`),
-          api.get(`/api/reviews/user/${user.id}/rating`),
+          api.get(`/api/auth/users/${userId}`),
+          api.get(`/api/reviews/user/${userId}/rating`),
         ]);
         setUserData(userRes.data);
         setRating(ratingRes.data);
       } catch {
-        // обработка ошибок опущена
+        // ошибка опущена
       } finally {
         setLoading(false);
       }
     };
 
     fetchAll();
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
+
     const fetchTabData = async () => {
       setLoading(true);
       try {
         if (activeTab === 'listings') {
-          const res = await api.get(`/api/listings/user/${user.id}/all`, {
+          const res = await api.get(`/api/listings/user/${userId}/all`, {
             params: { page, size: PAGE_SIZE },
           });
           setListings(res.data.content);
           setTotalPages(res.data.totalPages);
         } else {
-          const res = await api.get(`/api/catalog/wanted/${user.id}`, {
+          const res = await api.get(`/api/catalog/wanted/${userId}`, {
             params: { page, size: PAGE_SIZE },
           });
           setWanted(res.data.content);
           setTotalPages(res.data.totalPages);
         }
       } catch {
-        // обработка ошибок опущена
+        // ошибка опущена
       } finally {
         setLoading(false);
       }
     };
 
     fetchTabData();
-  }, [activeTab, page, user?.id]);
+  }, [activeTab, page, userId]);
 
   if (!userData) {
     return (
@@ -126,7 +130,7 @@ const Profile: React.FC = () => {
           }
         }}
       >
-      <TabsList className="mb-4">
+        <TabsList className="mb-4">
           <TabsTrigger value="listings">Я готов предложить</TabsTrigger>
           <TabsTrigger value="wanted">Я хочу</TabsTrigger>
         </TabsList>
@@ -152,15 +156,19 @@ const Profile: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    <img
-                      src={item.imageUrls?.[0] || '/book-placeholder.png'}
-                      alt="Обложка"
-                      className="w-full aspect-[2/3] object-cover"
-                    />
+                    <Link to={`/books/${item.id}`}>
+                      <img
+                        src={item.imageUrls?.[0] || '/book-placeholder.png'}
+                        alt="Обложка"
+                        className="w-full aspect-[2/3] object-cover"
+                      />
+                    </Link>
                   </div>
 
                   <div className="p-4 space-y-1">
-                    <div className="font-semibold">{item.bookTitle}</div>
+                    <Link to={`/books/${item.id}`} className="font-semibold hover:underline block">
+                      {item.bookTitle}
+                    </Link>
                     <div className="text-sm text-muted-foreground">{item.bookAuthor}</div>
                     <div className="text-sm">{item.cityName}</div>
                     <div className="text-xs text-muted-foreground">

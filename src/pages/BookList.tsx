@@ -1,149 +1,279 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { API } from '../config/api-endpoints';
-import type { Book } from '../types';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
+import type { ListingDto, ListingFilterDto } from '@/types/dto.ts';
 
-type BadgeVariant = 'secondary' | 'outline' | 'default' | 'destructive';
+const CONDITIONS = [
+  { value: 'NEW', label: 'Новое' },
+  { value: 'LIKE_NEW', label: 'Как новое' },
+  { value: 'GOOD', label: 'Хорошее' },
+  { value: 'FAIR', label: 'Приемлемое' },
+  { value: 'POOR', label: 'Плохое' },
+];
 
-function getBookStatusBadgeVariant(status: string): BadgeVariant {
-  switch (status.toLowerCase()) {
-    case 'доступно':
-      return 'default';
-    case 'зарезервировано':
-      return 'secondary';
-    case 'обменено':
-      return 'outline';
-    default:
-      return 'secondary';
-  }
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+const PAGE_SIZE = 6;
 
 const BookList: React.FC = () => {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number>(0); // 0 — «все»
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [city, setCity] = useState('');
+  const [genreId, setGenreId] = useState<string>('');
+  const [condition, setCondition] = useState('');
+  const [page, setPage] = useState(0);
+
+  const [titleOptions, setTitleOptions] = useState<string[]>([]);
+  const [authorOptions, setAuthorOptions] = useState<string[]>([]);
+  const [cityOptions, setCityOptions] = useState<{ id: number; name: string }[]>([]);
+  const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
+  const [listings, setListings] = useState<ListingDto[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
-    // Параллельно грузим книги и категории
-    Promise.all([
-      api.get(API.BOOKS.LIST),
-      api.get(API.CATEGORIES.LIST),
-    ])
-      .then(([booksRes, catsRes]) => {
-        setBooks(booksRes.data);
-        setCategories(catsRes.data);
-      })
-      .catch(() => {
-        setError('Не удалось загрузить данные. Пожалуйста, попробуйте позже.');
-      })
-      .finally(() => setLoading(false));
+    api.get(API.BOOKS.GENRES).then(res => setGenres(res.data));
   }, []);
 
-  // Фильтрация книг сразу по статусу и категории
-  const filteredBooks = books
-    .filter(book => book.status !== 'Зарезервировано')
-    .filter(book =>
-      selectedCategory === 0
-        ? true
-        : book.category_id === selectedCategory
-    );
+  useEffect(() => {
+    fetchListings();
+  }, [page]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <span className="text-muted-foreground text-lg">Загрузка списка книг...</span>
-      </div>
-    );
-  }
+  const fetchListings = async () => {
+    const cityObj = cityOptions.find(c => city.toLowerCase().includes(c.name.toLowerCase()));
+    const allowedConditions = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'] as const;
+    type Condition = typeof allowedConditions[number];
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Повторить попытку
-        </Button>
-      </div>
-    );
-  }
+    const isValidCondition = (value: string): value is Condition =>
+      allowedConditions.includes(value as Condition);
+
+    const filters: ListingFilterDto = {
+      title: title || undefined,
+      author: author || undefined,
+      genreIds: genreId ? [parseInt(genreId)] : undefined,
+      condition: isValidCondition(condition) ? condition : undefined,
+      cityId: cityObj?.id || undefined,
+    };
+    const res = await api.post(`${API.LISTINGS.FILTER}?page=${page}&size=${PAGE_SIZE}`, filters);
+    setListings(res.data.content);
+    setTotalPages(res.data.totalPages);
+  };
+
+  const handleSearch = () => {
+    setPage(0);
+    fetchListings();
+  };
+
+  const fetchCityOptions = async (query: string) => {
+    const res = await api.get(API.LISTINGS.SEARCH_CITIES, { params: { query } });
+    setCityOptions(res.data);
+  };
+
+  const fetchTitleOptions = async (query: string) => {
+    const res = await api.get(API.BOOKS.AUTOCOMPLETE_TITLE, { params: { prefix: query } });
+    setTitleOptions(res.data);
+  };
+
+  const fetchAuthorOptions = async (query: string) => {
+    const res = await api.get(API.BOOKS.AUTOCOMPLETE_AUTHOR, { params: { prefix: query } });
+    setAuthorOptions(res.data);
+  };
 
   return (
-    <div className="flex flex-col items-center py-8 px-4">
-      <div className="w-full max-w-4xl space-y-6">
-        <h2 className="text-2xl font-bold">Доступные книги</h2>
+    <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="space-y-2 relative">
+          <Label htmlFor="title">Название книги</Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.length >= 1) fetchTitleOptions(e.target.value);
+            }}
+            onFocus={() => {
+              setAuthorOptions([]);
+              setCityOptions([]);
+            }}
+            placeholder="Начните вводить..."
+          />
+          {titleOptions.length > 0 && (
+            <div className="absolute w-full z-10 mt-1 border rounded-md bg-white shadow max-h-40 overflow-y-auto">
+              {titleOptions.map((t, i) => (
+                <div
+                  key={i}
+                  onClick={() => {
+                    setTitle(t);
+                    setTitleOptions([]);
+                  }}
+                  className="px-4 py-2 hover:bg-accent cursor-pointer"
+                >
+                  {t}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Фильтр по категории */}
-        <div className="flex items-center gap-4">
-          <Label htmlFor="categoryFilter">Категория:</Label>
+        <div className="space-y-2 relative">
+          <Label htmlFor="author">Автор</Label>
+          <Input
+            id="author"
+            value={author}
+            onChange={(e) => {
+              setAuthor(e.target.value);
+              if (e.target.value.length >= 1) fetchAuthorOptions(e.target.value);
+            }}
+            onFocus={() => {
+              setTitleOptions([]);
+              setCityOptions([]);
+            }}
+            placeholder="Начните вводить..."
+          />
+          {authorOptions.length > 0 && (
+            <div className="absolute w-full z-10 mt-1 border rounded-md bg-white shadow max-h-40 overflow-y-auto">
+              {authorOptions.map((a, i) => (
+                <div
+                  key={i}
+                  onClick={() => {
+                    setAuthor(a);
+                    setAuthorOptions([]);
+                  }}
+                  className="px-4 py-2 hover:bg-accent cursor-pointer"
+                >
+                  {a}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 relative">
+          <Label htmlFor="city">Город</Label>
+          <Input
+            id="city"
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              if (e.target.value.length >= 1) fetchCityOptions(e.target.value);
+            }}
+            onFocus={() => {
+              setTitleOptions([]);
+              setAuthorOptions([]);
+            }}
+            placeholder="Начните вводить..."
+          />
+          {cityOptions.length > 0 && (
+            <div className="absolute w-full z-10 mt-1 border rounded-md bg-white shadow max-h-40 overflow-y-auto">
+              {cityOptions.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => {
+                    setCity(c.name);
+                    setCityOptions([]);
+                  }}
+                  className="px-4 py-2 hover:bg-accent cursor-pointer"
+                >
+                  {c.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 relative">
+          <Label>Жанр</Label>
           <select
-            id="categoryFilter"
-            value={selectedCategory}
-            onChange={e => setSelectedCategory(Number(e.target.value))}
-            className="block w-60 border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            value={genreId}
+            onChange={(e) => setGenreId(e.target.value)}
+            className="w-full border rounded-md px-2 py-1"
           >
-            <option value={0}>— Все категории —</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
+            <option value="">— Любой жанр —</option>
+            {genres.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
         </div>
 
-        {filteredBooks.length === 0 ? (
-          <p className="text-muted-foreground text-center">Нет доступных книг.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {filteredBooks.map(book => (
-              <Card key={book.id} className="flex flex-col justify-between h-full border shadow-md">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{book.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2 flex-1">
-                  <div>
-                    <span className="text-muted-foreground">Автор:</span>
-                    <span className="ml-2">{book.author}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Статус:</span>
-                    <Badge variant={getBookStatusBadgeVariant(book.status)}>
-                      {book.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-                <div className="p-4 pt-0 flex">
-                  <Button
-                    className="w-full"
-                    variant="default"
-                    onClick={() => navigate(`/books/${book.id}`)}
-                  >
-                    Подробнее
-                  </Button>
-                </div>
-              </Card>
+        <div className="space-y-2 relative">
+          <Label>Состояние</Label>
+          <select
+            value={condition}
+            onChange={(e) => setCondition(e.target.value)}
+            className="w-full border rounded-md px-2 py-1"
+          >
+            <option value="">— Любое состояние —</option>
+            {CONDITIONS.map(c => (
+              <option key={c.value} value={c.value}>{c.label}</option>
             ))}
-          </div>
-        )}
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <Button onClick={handleSearch}>Поиск</Button>
+        </div>
       </div>
+
+      <div className="space-y-4">
+        {listings.map(listing => (
+          <Card key={listing.id} className="overflow-hidden py-0">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Link to={`/profile/${listing.ownerId}`}>
+                    <img
+                      src={listing.ownerAvatar || '/default-avatar.jpg'}
+                      alt="avatar"
+                      className="w-6 h-6 rounded-full hover:opacity-80 transition"
+                    />
+                  </Link>
+                  <Link to={`/profile/${listing.ownerId}`} className="font-medium hover:underline">
+                    {listing.ownerName}
+                  </Link>
+                  <Link to={`/books/${listing.id}`} className="ml-2 hover:underline">
+                    добавил объявление <strong>{listing.bookTitle}</strong> автора <strong>{listing.bookAuthor}</strong>
+                  </Link>
+                </div>
+                <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
+              </div>
+              <hr />
+              <div className="flex gap-4">
+                <Link to={`/books/${listing.id}`} className="shrink-0">
+                  <img
+                    src={listing.imageUrls?.[0] || '/book-placeholder.png'}
+                    alt="Обложка"
+                    className="w-36 h-56 object-cover rounded hover:opacity-90 transition"
+                  />
+                </Link>
+                <div className="flex flex-col justify-between">
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">Город: {listing.cityName}</div>
+                    <div className="text-sm">
+                      Состояние: {CONDITIONS.find(c => c.value === listing.condition)?.label}
+                    </div>
+                    {listing.bookDescription && (
+                      <div className="text-sm text-muted-foreground">{listing.bookDescription}</div>
+                    )}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <Button variant="outline">Написать сообщение</Button>
+                    <Button>Предложить обмен</Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 };
