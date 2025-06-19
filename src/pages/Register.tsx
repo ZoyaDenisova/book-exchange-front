@@ -8,24 +8,63 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface City {
+  id: number;
+  name: string;
+  region: string;
+  country: string;
+}
+
 const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [citySearch, setCitySearch] = useState('');
+  const [cityOptions, setCityOptions] = useState<City[]>([]);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const handleCitySearch = async (query: string) => {
+    setCitySearch(query);
+    try {
+      if (query.length < 2) {
+        setCityOptions([]);
+        return;
+      }
+      const res = await api.get('/api/listings/cities/search', {
+        params: { query }  // 🔧 фикс: был name
+      });
+      console.log('Список городов:', res.data);
+      setCityOptions(res.data);
+    } catch {
+      setCityOptions([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!selectedCity) {
+      setError('Выберите город из списка');
+      return;
+    }
     try {
-      setError(null);
-      const res = await api.post(API.AUTH.REGISTER, { name, email, password });
+      const res = await api.post(API.AUTH.REGISTER, {
+        name,
+        email,
+        password,
+        cityId: selectedCity.id
+      });
       localStorage.setItem('token', res.data.token);
       navigate('/');
-    } catch (error) {
+    } catch {
       setError('Регистрация не удалась. Пожалуйста, попробуйте другой email.');
     }
   };
+
+  // 👇 перенесён сюда, чтобы не нарушать JSX
+  console.log("Список городов:", cityOptions);
 
   return (
     <div className="flex justify-center py-12 px-4">
@@ -39,12 +78,11 @@ const Register: React.FC = () => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 relative">
             <div className="space-y-2">
               <Label htmlFor="name">Имя</Label>
               <Input
                 id="name"
-                type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -70,6 +108,38 @@ const Register: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">Город</Label>
+              <Input
+                id="city"
+                value={citySearch}
+                onChange={(e) => handleCitySearch(e.target.value)}
+                placeholder="Начните вводить название..."
+                required
+              />
+              {cityOptions.length > 0 && (
+                <div className="absolute w-full z-10 mt-1 border rounded-md bg-white shadow max-h-40 overflow-y-auto">
+                  {cityOptions.map((city) => (
+                    <div
+                      key={city.id}
+                      onClick={() => {
+                        setSelectedCity(city);
+                        setCitySearch(`${city.name}, ${city.region}`);
+                        setCityOptions([]);
+                      }}
+                      className="px-4 py-2 hover:bg-accent cursor-pointer"
+                    >
+                      {city.name}, {city.region}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selectedCity && (
+                <div className="text-sm text-muted-foreground">
+                  Выбран: {selectedCity.name}, {selectedCity.region}
+                </div>
+              )}
             </div>
             <Button type="submit" className="w-full mt-4">
               Зарегистрироваться

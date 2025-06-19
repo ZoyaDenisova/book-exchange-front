@@ -21,11 +21,13 @@ const Login: React.FC = () => {
     setError(null);
     try {
       const res = await api.post(API.AUTH.LOGIN, { email, password });
-      const success = await login(res.data.token);
+      const accessToken = res.data.accessToken;
+
+      const success = await login(accessToken);
       if (success) {
         navigate('/');
       } else {
-        setError('Неверный email или пароль.');
+        setError('Ошибка авторизации. Попробуйте ещё раз.');
       }
     } catch {
       setError('Неверный email или пароль.');

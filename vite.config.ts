@@ -12,6 +12,9 @@ export default defineConfig({
     },
   },
   server: {
+    proxy: {
+      '/uploads': 'http://localhost:8080',
+    },
     port: 3001
   }
 })

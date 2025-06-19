@@ -1,13 +1,14 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from '../services/api';
 import { API } from '../config/api-endpoints';
-import type {User} from '../types';
+import type { UserDto } from '@/types/dto';
 
 interface AuthContextType {
-    user: User | null;
+    user: UserDto | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (token: string) => Promise<boolean>; // 👈 возвращает результат
+    login: (token: string) => Promise<boolean>;
     logout: () => void;
 }
 
@@ -20,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<UserDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchProfile = async () => {
@@ -56,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsLoading(true);
             await fetchProfile();
             return true;
-        } catch (err) {
+        } catch {
             localStorage.removeItem('token');
             delete api.defaults.headers.common['Authorization'];
             setUser(null);
@@ -71,9 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
-            {children}
-        </AuthContext.Provider>
+      <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+          {children}
+      </AuthContext.Provider>
     );
 };
 
