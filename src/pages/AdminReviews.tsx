@@ -148,44 +148,43 @@ const [listingId, setListingId] = useState(initialListingId);
             )}
 
             {/* кнопки */}
-            {status === 'PENDING' && (
-              <div className="flex gap-4 mt-3">
-                <Button
-                  onClick={async () => {
-                    await api.patch(`/api/reviews/${r.id}/approve`);
-                    loadReviews();
-                  }}
-                >
-                  Одобрить
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    await api.patch(`/api/reviews/${r.id}/reject`);
-                    loadReviews();
-                  }}
-                >
-                  Отклонить
-                </Button>
-              </div>
-            )}
-            {status === 'REJECTED' && (
-  <div className="mt-3">
-    <Button
-      variant="destructive"
-      onClick={async () => {
-        try {
-            await api.delete(`/api/reviews/${r.id}`);
-            loadReviews();
-          } catch {
-            alert('Ошибка при удалении отзыва');
-          }
-      }}
-    >
-      Удалить
-    </Button>
-  </div>
-)}
+            <div className="flex gap-2">
+              {status !== 'APPROVED' && (
+            <Button
+              onClick={async () => {
+                await api.patch(`/api/reviews/${r.id}/approve`);
+                loadReviews();
+              }}
+            >
+              Одобрить
+            </Button>
+          )}
+
+          {status !== 'REJECTED' && (
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await api.patch(`/api/reviews/${r.id}/reject`);
+                loadReviews();
+              }}
+            >
+              Отклонить
+            </Button>
+          )}
+
+          {status === 'REJECTED' && (
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await api.delete(`/api/reviews/${r.id}`);
+                  loadReviews();
+              }}
+            >
+              Удалить
+            </Button>
+          )}
+            </div>
+
           </div>
         ))}
       </div>

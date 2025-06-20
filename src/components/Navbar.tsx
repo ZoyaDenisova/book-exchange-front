@@ -29,9 +29,9 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-6 ml-10">
             <Link to="/books" className="text-base font-medium hover:underline">Книги</Link>
             <Link to="/exchanges" className="text-base font-medium hover:underline">Запросы на обмен</Link>
-            {user?.role === 'admin' && (
+            {['admin', 'moderator'].includes(user?.role.toLowerCase() ?? '') && (
               <Link
-                to="http://localhost:4200/"
+                to="/admin"
                 className="text-base font-medium text-red-600 hover:underline"
               >
                 Админ-панель
