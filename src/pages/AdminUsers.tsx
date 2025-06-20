@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -24,6 +24,8 @@ const AdminUsers: React.FC = () => {
 
   const [complaintUserIds, setComplaintUserIds] = useState<Set<number>>(new Set());
 
+  const [ratings, setRatings] = useState<Record<number, number>>({});
+
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
@@ -44,6 +46,19 @@ const AdminUsers: React.FC = () => {
       try {
         const res = await api.get('/api/auth/users');
         setUsers(res.data);
+
+        const ratingMap: Record<number, number> = {};
+        await Promise.all(
+          res.data.map(async (u: any) => {
+            try {
+              const r = await api.get(`/api/reviews/user/${u.id}/rating`);
+              ratingMap[u.id] = r.data;
+            } catch {
+              ratingMap[u.id] = 0;
+            }
+          })
+        );
+        setRatings(ratingMap);
       } finally {
         setLoading(false);
       }
@@ -142,18 +157,26 @@ const AdminUsers: React.FC = () => {
             <div>
               <div className="font-semibold text-base">{user.name} г. {user.city?.name || '—'}</div>
               <div className="text-sm text-muted-foreground">ID: {user.id}</div>
+              <div className="text-sm text-muted-foreground">
+                Рейтинг: {ratings[user.id]?.toFixed(2) ?? '—'}
+              </div>
+
             </div>
           </div>
           <div className="flex gap-2 flex-wrap justify-between w-full">
-            {/* временная заглушка на жалобы */}
             <div className="flex items-center gap-2">
-              <div
-                className={`px-4 py-1 rounded-full text-white text-sm font-semibold ${
-                  complaintUserIds.has(user.id) ? 'bg-red-600' : 'bg-sky-500'
-                }`}
-              >
-                {complaintUserIds.has(user.id) ? 'Есть жалобы' : 'Жалоб нет'}
-              </div>
+              {complaintUserIds.has(user.id) ? (
+                <Link
+                  to={`/admin/complaints?toUser=${encodeURIComponent(user.name)}`}
+                  className="px-4 py-1 rounded-full text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition"
+                >
+                  Есть жалобы
+                </Link>
+              ) : (
+                <div className="px-4 py-1 rounded-full text-sm font-semibold bg-sky-500 text-white">
+                  Жалоб нет
+                </div>
+              )}
             <Button
               variant="outline"
               onClick={() => navigate(`/profile/${user.id}`)}
