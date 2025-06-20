@@ -11,6 +11,7 @@ import MyBooks from './pages/MyBooks';
 import ExchangeRequests from './pages/ExchangeRequests';
 import Profile from './pages/Profile';
 import EditBook from "./pages/EditBook";
+import DialogsPage from "@/pages/DialogsPage.tsx";
 
 
 const App: React.FC = () => {
@@ -30,7 +31,7 @@ const App: React.FC = () => {
             <Route path="/my-books" element={<MyBooks />} />
             <Route path="/exchanges" element={<ExchangeRequests />} />
             <Route path="/profile/:userId" element={<Profile />} />
-
+            <Route path="/dialogs" element={<DialogsPage />} />
           </Routes>
         </main>
       </div>

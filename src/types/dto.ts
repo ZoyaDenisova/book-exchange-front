@@ -32,17 +32,26 @@ export interface CreateListingDto {
 
 export interface ListingDto {
   id: number;
-  bookTitle: string;
-  bookAuthor: string;
-  bookDescription?: string;
+  book: {
+    id: number;
+    title: string;
+    author: string;
+    description?: string;
+    imageUrl?: string;
+  };
+  city: {
+    id: number;
+    name: string;
+  };
+  owner: {
+    id: number;
+    name: string;
+    avatarUrl?: string;
+  };
   condition: 'NEW' | 'LIKE_NEW' | 'GOOD' | 'FAIR' | 'POOR';
-  cityName: string;
   imageUrls: string[];
   isOpen: boolean;
   isBlocked: boolean;
-  ownerId: number;
-  ownerName?: string;
-  ownerAvatar?: string;
   createdAt: string;
 }
 
@@ -74,15 +83,15 @@ export interface ExchangeCreateDto {
 }
 
 export interface ExchangeDto {
-  id?: number;
-  senderId?: number;
-  receiverId?: number;
-  offeredListingId?: number;
-  selectedListingId?: number;
-  status?: string;
-  senderConfirmedCompletion?: boolean;
-  receiverConfirmedCompletion?: boolean;
-  createdAt?: string;
+  id: number;
+  sender: UserDto;
+  receiver: UserDto;
+  offeredListing: ListingDto;
+  selectedListing: ListingDto;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED'; // зависит от enum на бэке
+  senderConfirmedCompletion: boolean;
+  receiverConfirmedCompletion: boolean;
+  createdAt: string;
   completedAt?: string;
 }
 
@@ -179,16 +188,17 @@ export interface UpdateUserDto {
 }
 
 export interface ReviewDto {
-  id?: number;
-  listingId?: number;
-  fromUserId?: number;
-  toUserId?: number;
-  rating?: number;
-  comment?: string;
-  moderationStatus?: string;
-  imageUrls?: string[];
-  createdAt?: string;
+  id: number;
+  listing: ListingDto;
+  fromUser: UserDto;
+  toUser: UserDto;
+  rating: number;
+  comment: string;
+  moderationStatus: string;
+  imageUrls: string[];
+  createdAt: string;
 }
+
 
 export interface ComplaintDto {
   id?: number;
@@ -217,14 +227,14 @@ export interface DialogDto {
 }
 
 export interface MessageDto {
-  messageId?: number;
-  authorId?: number;
-  authorName?: string;
-  content?: string;
-  imageUrls?: string[];
+  messageId: number;
+  authorId: number;
+  authorName: string;
+  content: string;
+  imageUrls: string[];
   exchange?: ExchangeDto;
-  isExchangeProposal?: boolean;
-  createdAt?: string;
+  isExchangeProposal: boolean;
+  createdAt: string;
 }
 
 export interface CityDto {

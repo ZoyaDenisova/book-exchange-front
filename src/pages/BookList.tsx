@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { API } from '../config/api-endpoints';
-import { Input } from '@/components/ui/input';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { ListingDto, ListingFilterDto } from '@/types/dto.ts';
+import CoverImage from '@/components/CoverImage';
+import type { ListingDto, ListingFilterDto } from '@/types/dto';
+import StartDialogModal from '@/components/StartDialogModal';
 
 const CONDITIONS = [
   { value: 'NEW', label: 'Новое' },
@@ -20,12 +23,14 @@ const CONDITIONS = [
 const PAGE_SIZE = 6;
 
 const BookList: React.FC = () => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [city, setCity] = useState('');
-  const [genreId, setGenreId] = useState<string>('');
+  const [genreId, setGenreId] = useState('');
   const [condition, setCondition] = useState('');
   const [page, setPage] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState<number | null>(null);
 
   const [titleOptions, setTitleOptions] = useState<string[]>([]);
   const [authorOptions, setAuthorOptions] = useState<string[]>([]);
@@ -44,19 +49,15 @@ const BookList: React.FC = () => {
 
   const fetchListings = async () => {
     const cityObj = cityOptions.find(c => city.toLowerCase().includes(c.name.toLowerCase()));
-    const allowedConditions = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'] as const;
-    type Condition = typeof allowedConditions[number];
-
-    const isValidCondition = (value: string): value is Condition =>
-      allowedConditions.includes(value as Condition);
 
     const filters: ListingFilterDto = {
       title: title || undefined,
       author: author || undefined,
       genreIds: genreId ? [parseInt(genreId)] : undefined,
-      condition: isValidCondition(condition) ? condition : undefined,
+      condition: condition !== '' ? (condition as ListingFilterDto['condition']) : undefined,
       cityId: cityObj?.id || undefined,
     };
+
     const res = await api.post(`${API.LISTINGS.FILTER}?page=${page}&size=${PAGE_SIZE}`, filters);
     setListings(res.data.content);
     setTotalPages(res.data.totalPages);
@@ -84,6 +85,7 @@ const BookList: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
+      {/* Фильтры */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="space-y-2 relative">
           <Label htmlFor="title">Название книги</Label>
@@ -217,63 +219,70 @@ const BookList: React.FC = () => {
         </div>
       </div>
 
+      {/* Список карточек */}
       <div className="space-y-4">
-        {listings.map(listing => (
-          <Card key={listing.id} className="overflow-hidden py-0">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Link to={`/profile/${listing.ownerId}`}>
-                    <img
-                      src={listing.ownerAvatar || '/default-avatar.jpg'}
-                      alt="avatar"
-                      className="w-6 h-6 rounded-full hover:opacity-80 transition"
+        {listings.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            Объявления не найдены
+          </div>
+        ) : (
+          listings.map(listing => (
+            <Card key={listing.id} className="overflow-hidden py-0">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Link to={`/profile/${listing.owner.id}`}>
+                      <img
+                        src={listing.owner.avatarUrl || '/default-avatar.jpg'}
+                        alt="avatar"
+                        className="w-6 h-6 rounded-full hover:opacity-80 transition"
+                      />
+                    </Link>
+                    <Link to={`/profile/${listing.owner.id}`} className="font-medium hover:underline">
+                      {listing.owner.name}
+                    </Link>
+                    <Link to={`/books/${listing.id}`} className="ml-2 hover:underline">
+                      добавил объявление <strong>{listing.book.title}</strong> автора <strong>{listing.book.author}</strong>
+                    </Link>
+                  </div>
+                  <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
+                </div>
+                <hr />
+                <div className="flex gap-4">
+                  <Link to={`/books/${listing.id}`} className="shrink-0">
+                    <CoverImage
+                      src={listing.book.imageUrl}
+                      className="w-36 h-56 rounded hover:opacity-90 transition"
                     />
                   </Link>
-                  <Link to={`/profile/${listing.ownerId}`} className="font-medium hover:underline">
-                    {listing.ownerName}
-                  </Link>
-                  <Link to={`/books/${listing.id}`} className="ml-2 hover:underline">
-                    добавил объявление <strong>{listing.bookTitle}</strong> автора <strong>{listing.bookAuthor}</strong>
-                  </Link>
-                </div>
-                <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
-              </div>
-              <hr />
-              <div className="flex gap-4">
-                <Link to={`/books/${listing.id}`} className="shrink-0">
-                  <img
-                    src={listing.imageUrls?.[0] || '/book-placeholder.png'}
-                    alt="Обложка"
-                    className="w-36 h-56 object-cover rounded hover:opacity-90 transition"
-                  />
-                </Link>
-                <div className="flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Город: {listing.cityName}</div>
-                    <div className="text-sm">
-                      Состояние: {CONDITIONS.find(c => c.value === listing.condition)?.label}
+                  <div className="flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <div className="text-sm text-muted-foreground">Город: {listing.city.name}</div>
+                      <div className="text-sm">
+                        Состояние: {CONDITIONS.find(c => c.value === listing.condition)?.label}
+                      </div>
+                      {listing.book.description && (
+                        <div className="text-sm text-muted-foreground">{listing.book.description}</div>
+                      )}
                     </div>
-                    {listing.bookDescription && (
-                      <div className="text-sm text-muted-foreground">{listing.bookDescription}</div>
+                    {user?.id !== listing.owner.id && (
+                      <div className="mt-2 flex gap-2">
+                        <Button variant="outline" onClick={() => setDialogOpen(listing.id)}>Написать сообщение</Button>
+                        <StartDialogModal listingId={listing.id} open={dialogOpen === listing.id} onClose={() => setDialogOpen(null)} />
+                        <Button asChild>
+                          <Link to={`/books/${listing.id}`}>Предложить обмен</Link>
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  <div className="mt-2 flex gap-2">
-                    <Button variant="outline">Написать сообщение</Button>
-                    <Button>Предложить обмен</Button>
-                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      <Pagination
-        currentPage={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-      />
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 };

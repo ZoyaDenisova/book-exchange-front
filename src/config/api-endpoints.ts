@@ -21,6 +21,9 @@ export const API = {
     AUTOCOMPLETE_TITLE: '/api/catalog/books/autocomplete/title',
     AUTOCOMPLETE_AUTHOR: '/api/catalog/books/autocomplete/author',
     GENRES: '/api/catalog/genres',
+    CREATE: '/api/catalog',
+    SEARCH: '/api/catalog/filter',
+    DETAIL: (id: number) => `/api/catalog/${id}`
   },
 
   CATALOG: {
@@ -60,11 +63,11 @@ export const API = {
     CONFIRM: (id: number) => `/api/exchange/${id}/confirm`,
   },
 
-  MESSAGING: {
-    DIALOGS: '/api/messages/dialogs',
+  MESSAGES: {
+    USER_DIALOGS: '/api/messages/dialogs',
     DIALOG_DETAIL: (id: number) => `/api/messages/dialogs/${id}`,
-    MESSAGES: (id: number) => `/api/messages/dialogs/${id}/messages`,
-    SEND_MESSAGE: (listingId: number) => `/api/messages/listing/${listingId}/send`,
+    DIALOG_MESSAGES: (dialogId: number) => `/api/messages/dialogs/${dialogId}/messages`,
+    SEND: (listingId: number) => `/api/messages/listing/${listingId}/send`,
     PROPOSE_EXCHANGE: (listingId: number, offeredId: number) =>
       `/api/messages/listing/${listingId}/propose-exchange?offeredListingId=${offeredId}`,
   },

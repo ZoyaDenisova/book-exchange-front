@@ -5,26 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
-import type { UserDto } from '@/types/dto.ts';
+import type { UserDto, ListingDto, BookDto } from '@/types/dto.ts';
 import { cn } from '@/lib/utils';
-import { useParams, Link } from 'react-router-dom';
-
-interface Listing {
-  id: number;
-  bookTitle: string;
-  bookAuthor: string;
-  cityName: string;
-  createdAt: string;
-  imageUrls: string[];
-  isOpen: boolean;
-}
-
-interface Book {
-  id: number;
-  title: string;
-  author: string;
-  imageUrl?: string;
-}
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import CoverImage from '@/components/CoverImage.tsx';
+import ReviewSection from '@/components/ReviewSection.tsx';
+import ComplaintModal from '@/components/ComplaintModal';
 
 const PAGE_SIZE = 6;
 
@@ -33,14 +19,18 @@ const Profile: React.FC = () => {
   const { userId: paramUserId } = useParams();
   const userId = paramUserId ? Number(paramUserId) : user?.id;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as 'listings' | 'wanted' | 'reviews' | null;
+  const [activeTab, setActiveTab] = useState<'listings' | 'wanted' | 'reviews'>(tabParam ?? 'listings');
+
   const [userData, setUserData] = useState<UserDto | null>(null);
   const [rating, setRating] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'listings' | 'wanted'>('listings');
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [wanted, setWanted] = useState<Book[]>([]);
+  const [listings, setListings] = useState<ListingDto[]>([]);
+  const [wanted, setWanted] = useState<BookDto[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [complaintOpen, setComplaintOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -76,7 +66,7 @@ const Profile: React.FC = () => {
           });
           setListings(res.data.content);
           setTotalPages(res.data.totalPages);
-        } else {
+        } else if (activeTab === 'wanted') {
           const res = await api.get(`/api/catalog/wanted/${userId}`, {
             params: { page, size: PAGE_SIZE },
           });
@@ -92,6 +82,12 @@ const Profile: React.FC = () => {
 
     fetchTabData();
   }, [activeTab, page, userId]);
+
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   if (!userData) {
     return (
@@ -113,26 +109,37 @@ const Profile: React.FC = () => {
             alt="Аватар"
             className="w-24 h-24 rounded-full object-cover"
           />
-          <div className="space-y-1">
+          <div className="flex-1 space-y-1">
             <div><span className="text-muted-foreground">Имя:</span> {userData.name}</div>
             <div><span className="text-muted-foreground">Город:</span> {userData.city?.name || '—'}</div>
             <div><span className="text-muted-foreground">Рейтинг:</span> {rating?.toFixed(2) || '—'}</div>
           </div>
+          {user && user.id !== userData.id && (
+            <div>
+              <button
+                onClick={() => setComplaintOpen(true)}
+                className="text-sm text-red-600 border border-red-600 rounded-md px-4 py-1 hover:bg-red-50"
+              >
+                Пожаловаться
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Tabs
         value={activeTab}
         onValueChange={(val) => {
-          if (val === 'listings' || val === 'wanted') {
-            setActiveTab(val);
-            setPage(0);
-          }
+          const nextTab = val as 'listings' | 'wanted' | 'reviews';
+          setActiveTab(nextTab);
+          setPage(0);
+          setSearchParams({ tab: nextTab });
         }}
       >
         <TabsList className="mb-4">
           <TabsTrigger value="listings">Я готов предложить</TabsTrigger>
           <TabsTrigger value="wanted">Я хочу</TabsTrigger>
+          <TabsTrigger value="reviews">Отзывы</TabsTrigger>
         </TabsList>
 
         <TabsContent value="listings">
@@ -157,20 +164,19 @@ const Profile: React.FC = () => {
                       </div>
                     )}
                     <Link to={`/books/${item.id}`}>
-                      <img
-                        src={item.imageUrls?.[0] || '/book-placeholder.png'}
-                        alt="Обложка"
-                        className="w-full aspect-[2/3] object-cover"
+                      <CoverImage
+                        src={item.book?.imageUrl}
+                        className="w-full aspect-[2/3]"
                       />
                     </Link>
                   </div>
 
                   <div className="p-4 space-y-1">
                     <Link to={`/books/${item.id}`} className="font-semibold hover:underline block">
-                      {item.bookTitle}
+                      {item.book?.title}
                     </Link>
-                    <div className="text-sm text-muted-foreground">{item.bookAuthor}</div>
-                    <div className="text-sm">{item.cityName}</div>
+                    <div className="text-sm text-muted-foreground">{item.book?.author}</div>
+                    <div className="text-sm">{item.city?.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </div>
@@ -188,10 +194,9 @@ const Profile: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {wanted.map((book) => (
                 <div key={book.id} className="border rounded-xl overflow-hidden shadow-md">
-                  <img
-                    src={book.imageUrl || '/book-placeholder.png'}
-                    alt="Обложка"
-                    className="w-full aspect-[2/3] object-cover"
+                  <CoverImage
+                    src={book.imageUrl}
+                    className="w-full aspect-[2/3]"
                   />
                   <div className="p-4 space-y-1">
                     <div className="font-semibold">{book.title}</div>
@@ -202,6 +207,10 @@ const Profile: React.FC = () => {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="reviews">
+          <ReviewSection userId={userId!} />
+        </TabsContent>
       </Tabs>
 
       <Pagination
@@ -209,6 +218,14 @@ const Profile: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(p) => setPage(p)}
       />
+
+      {user && user.id !== userData.id && (
+        <ComplaintModal
+          open={complaintOpen}
+          onClose={() => setComplaintOpen(false)}
+          userId={userData.id}
+        />
+      )}
     </div>
   );
 };
