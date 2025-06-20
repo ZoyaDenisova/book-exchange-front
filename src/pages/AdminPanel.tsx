@@ -15,7 +15,7 @@ const AdminPanel: React.FC = () => {
     return <div className="p-8 text-center text-muted-foreground">Загрузка...</div>;
   }
 
-  if (!user || user.role.toLowerCase() !== 'admin') {
+  if (!user || !['admin', 'moderator'].includes(user.role.toLowerCase())) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 

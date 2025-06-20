@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import EditBook from "./pages/EditBook";
 import DialogsPage from "@/pages/DialogsPage.tsx";
 import AdminPanel from './pages/AdminPanel';
+import AddWantedBook from "@/pages/AddWantedBook.tsx";
 
 const App: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ const App: React.FC = () => {
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/dialogs" element={<DialogsPage />} />
             <Route path="/admin/*" element={<AdminPanel />} />
+            <Route path="/wanted/add" element={<AddWantedBook />} />
           </Routes>
         </main>
       </div>

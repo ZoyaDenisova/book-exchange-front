@@ -7,16 +7,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
 import type { UserDto, ListingDto, BookDto } from '@/types/dto.ts';
 import { cn } from '@/lib/utils';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import CoverImage from '@/components/CoverImage.tsx';
 import ReviewSection from '@/components/ReviewSection.tsx';
 import ComplaintModal from '@/components/ComplaintModal';
+import { Button } from '@/components/ui/button.tsx';
 
 const PAGE_SIZE = 6;
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const { userId: paramUserId } = useParams();
+  const navigate = useNavigate();
   const userId = paramUserId ? Number(paramUserId) : user?.id;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +33,20 @@ const Profile: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [complaintOpen, setComplaintOpen] = useState(false);
+  const [confirmCloseId, setConfirmCloseId] = useState<number | null>(null);
+
+  const [confirmRemoveWantedId, setConfirmRemoveWantedId] = useState<number | null>(null);
+  const handleRemoveWanted = async () => {
+    if (confirmRemoveWantedId === null) return;
+    try {
+      await api.delete(`/api/catalog/wanted/${confirmRemoveWantedId}`);
+      setWanted(prev => prev.filter(b => b.id !== confirmRemoveWantedId));
+    } catch {
+      alert('Ошибка при удалении из хотелок');
+    } finally {
+      setConfirmRemoveWantedId(null);
+    }
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -89,6 +105,18 @@ const Profile: React.FC = () => {
     }
   }, [tabParam]);
 
+  const handleCloseListing = async () => {
+    if (confirmCloseId === null) return;
+    try {
+      await api.patch(`/api/listings/${confirmCloseId}/close`);
+      setListings(prev => prev.map(l => l.id === confirmCloseId ? { ...l, isOpen: false } : l));
+    } catch {
+      alert('Ошибка при закрытии объявления');
+    } finally {
+      setConfirmCloseId(null);
+    }
+  };
+
   if (!userData) {
     return (
       <div className="flex justify-center py-8">
@@ -136,11 +164,24 @@ const Profile: React.FC = () => {
           setSearchParams({ tab: nextTab });
         }}
       >
-        <TabsList className="mb-4">
-          <TabsTrigger value="listings">Я готов предложить</TabsTrigger>
-          <TabsTrigger value="wanted">Я хочу</TabsTrigger>
-          <TabsTrigger value="reviews">Отзывы</TabsTrigger>
-        </TabsList>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <TabsList>
+            <TabsTrigger value="listings">Я готов предложить</TabsTrigger>
+            <TabsTrigger value="wanted">Я хочу</TabsTrigger>
+            <TabsTrigger value="reviews">Отзывы</TabsTrigger>
+          </TabsList>
+
+          {user?.id === userData.id && (
+            <div className="flex gap-2">
+              <Button asChild>
+                <Link to="/book/add">Добавить объявление</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/wanted/add">Добавить хотелку</Link>
+              </Button>
+            </div>
+          )}
+        </div>
 
         <TabsContent value="listings">
           {loading ? (
@@ -151,10 +192,20 @@ const Profile: React.FC = () => {
                 <div
                   key={item.id}
                   className={cn(
-                    'border rounded-xl overflow-hidden shadow-md transition-opacity',
+                    'border rounded-xl overflow-hidden shadow-md transition-opacity relative',
                     !item.isOpen && 'opacity-70'
                   )}
                 >
+                  {user?.id === item.owner.id && item.isOpen && (
+                    <button
+                      onClick={() => setConfirmCloseId(item.id)}
+                      className="absolute top-2 right-2 z-20 bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
+                      title="Закрыть объявление"
+                    >
+                      ×
+                    </button>
+                  )}
+
                   <div className="relative">
                     {!item.isOpen && (
                       <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -193,7 +244,16 @@ const Profile: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {wanted.map((book) => (
-                <div key={book.id} className="border rounded-xl overflow-hidden shadow-md">
+                <div key={book.id} className="border rounded-xl overflow-hidden shadow-md relative">
+                  {user?.id === userData.id && book.id !== undefined && (
+                    <button
+                      onClick={() => setConfirmRemoveWantedId(book.id)}
+                      className="absolute top-2 right-2 z-20 bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
+                      title="Удалить из хотелок"
+                    >
+                      ×
+                    </button>
+                  )}
                   <CoverImage
                     src={book.imageUrl}
                     className="w-full aspect-[2/3]"
@@ -225,6 +285,55 @@ const Profile: React.FC = () => {
           onClose={() => setComplaintOpen(false)}
           userId={userData.id}
         />
+      )}
+
+      {confirmCloseId !== null && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl space-y-4 w-full max-w-sm">
+            <div className="text-lg font-semibold">Закрыть объявление?</div>
+            <div className="text-sm text-muted-foreground">
+              После закрытия пользователи не смогут предлагать обмены по этому объявлению.
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setConfirmCloseId(null)}
+                className="px-4 py-1 text-sm rounded border hover:bg-gray-100"
+              >
+                Нет
+              </button>
+              <button
+                onClick={handleCloseListing}
+                className="px-4 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Да
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmRemoveWantedId !== null && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl space-y-4 w-full max-w-sm">
+            <div className="text-lg font-semibold">Удалить из хотелок?</div>
+            <div className="text-sm text-muted-foreground">
+              Книга исчезнет из вашего списка желаемого.
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setConfirmRemoveWantedId(null)}
+                className="px-4 py-1 text-sm rounded border hover:bg-gray-100"
+              >
+                Нет
+              </button>
+              <button
+                onClick={handleRemoveWanted}
+                className="px-4 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Да
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
