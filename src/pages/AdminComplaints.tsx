@@ -26,11 +26,16 @@ const AdminComplaints: React.FC = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
-const [searchParams] = useSearchParams();
-const initialListingId = searchParams.get('listingId') || '';
-const [listingId, setListingId] = useState(initialListingId);
-const [userBans, setUserBans] = useState<Record<number, boolean>>({});
-const [listingBans, setListingBans] = useState<Record<number, boolean>>({});
+  const [searchParams] = useSearchParams();
+  const initialListingId = searchParams.get('listingId') || '';
+  const [listingId, setListingId] = useState(initialListingId);
+  const [userBans, setUserBans] = useState<Record<number, boolean>>({});
+  const [listingBans, setListingBans] = useState<Record<number, boolean>>({});
+  const initialFromUser = searchParams.get('fromUser') || '';
+  const initialToUser = searchParams.get('toUser') || '';
+
+  const [fromUser, setFromUser] = useState(initialFromUser);
+  const [toUser, setToUser] = useState(initialToUser);
 
   const loadComplaints = async () => {
     try {
@@ -42,6 +47,17 @@ const [listingBans, setListingBans] = useState<Record<number, boolean>>({});
       if (listingId.trim()) {
         result = result.filter((r) => r.listing?.id?.toString() === listingId.trim());
       }
+      if (fromUser.trim()) {
+        result = result.filter((r) =>
+          r.fromUser.name.toLowerCase().includes(fromUser.trim().toLowerCase())
+        );
+      }
+      if (toUser.trim()) {
+        result = result.filter((r) =>
+          r.toUser.name.toLowerCase().includes(toUser.trim().toLowerCase())
+        );
+      }
+
       setComplaints(result);
 
       // собрать всех юзеров и загрузить рейтинги
@@ -111,6 +127,19 @@ setListingBans(listingStatus);
           onChange={(e) => setListingId(e.target.value)}
           className="border rounded px-3 py-2 text-sm"
         />
+        <input
+          placeholder="Пользователь (от кого)"
+          value={fromUser}
+          onChange={(e) => setFromUser(e.target.value)}
+          className="border rounded px-3 py-2 text-sm"
+        />
+        <input
+          placeholder="Пользователь (на кого)"
+          value={toUser}
+          onChange={(e) => setToUser(e.target.value)}
+          className="border rounded px-3 py-2 text-sm"
+        />
+
         <Button onClick={loadComplaints}>Применить</Button>
       </div>
 
