@@ -1,3 +1,5 @@
+import EditProfileModal from "@/components/EditProfileModal.tsx";
+import {Button} from "@/components/ui/button.tsx";
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +33,7 @@ const Profile: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [complaintOpen, setComplaintOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -104,11 +107,42 @@ const Profile: React.FC = () => {
           <CardTitle className="text-2xl">Профиль пользователя</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
+          <div className="relative group">
           <img
-            src={userData.avatarUrl?.trim() ? userData.avatarUrl : '/default-avatar.jpg'}
-            alt="Аватар"
-            className="w-24 h-24 rounded-full object-cover"
+            src={userData.avatarUrl?.trim() || '/default-avatar.jpg'}
+            alt="avatar"
+            className="w-24 h-24 rounded-full object-cover border"
           />
+          {user?.id === userData.id && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+              onClick={() => document.getElementById('avatar-input')?.click()}>
+              <span className="text-white text-sm">Заменить</span>
+            </div>
+          )}
+          <input
+            id="avatar-input"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const form = new FormData();
+              form.append('file', file);
+              const fileUrl = URL.createObjectURL(file);
+              try {
+                await api.put('/api/auth/avatar', form);
+                setUserData({
+                  ...userData,
+                  avatarUrl: fileUrl
+                });
+              } catch {
+                alert('Ошибка при загрузке');
+              }
+            }}
+          />
+        </div>
+
           <div className="flex-1 space-y-1">
             <div><span className="text-muted-foreground">Имя:</span> {userData.name}</div>
             <div><span className="text-muted-foreground">Город:</span> {userData.city?.name || '—'}</div>
@@ -124,6 +158,30 @@ const Profile: React.FC = () => {
               </button>
             </div>
           )}
+          {user?.id === userData.id && userData.avatarUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await api.delete('/api/auth/avatar');
+                  setUserData({
+                    ...userData,
+                    avatarUrl: undefined
+                  });
+                } catch {
+                  alert('Ошибка при удалении');
+                }
+              }}
+            >
+              Удалить аватар
+            </Button>
+          )}
+
+          {user?.id === userData.id && (
+            <Button onClick={() => setEditOpen(true)}>Редактировать</Button>
+          )}
+
         </CardContent>
       </Card>
 
@@ -224,6 +282,15 @@ const Profile: React.FC = () => {
           open={complaintOpen}
           onClose={() => setComplaintOpen(false)}
           userId={userData.id}
+        />
+      )}
+
+      {user?.id === userData.id && (
+        <EditProfileModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          user={userData}
+          onUpdated={(updated) => setUserData(updated)}
         />
       )}
     </div>
