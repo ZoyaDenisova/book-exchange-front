@@ -11,6 +11,14 @@ import type { DialogDto, MessageDto, ListingDto } from '@/types/dto';
 import CoverImage from '@/components/CoverImage';
 import ListingSelector from '@/components/ListingSelector';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import ComplaintModal from "@/components/ComplaintModal.tsx";
+
+
 const DialogsPage: React.FC = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +34,9 @@ const DialogsPage: React.FC = () => {
   const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null);
   const [showSelector, setShowSelector] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<ListingDto | null>(null);
+
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [complaintTargetId, setComplaintTargetId] = useState<number | null>(null);
 
   const navigate = useNavigate();
 
@@ -174,14 +185,37 @@ const DialogsPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2 ml-auto">
                 <div className="text-right mr-2">
-                  <div className="font-medium">{isOwner ? otherUser?.authorName : selectedDialog.listingOwnerName}</div>
+                  <div className="font-medium">
+                    {isOwner ? otherUser?.authorName : selectedDialog.listingOwnerName}
+                  </div>
                 </div>
                 <img
                   src={selectedDialog.listingOwnerAvatar || '/default-avatar.jpg'}
                   alt="avatar"
                   className="w-8 h-8 rounded-full object-cover"
                 />
-                <Button size="icon" variant="ghost">⋮</Button>
+                <DropdownMenu
+                  trigger={<Button size="icon" variant="ghost">⋮</Button>}
+                  align="right"
+                >
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(`/profile/${otherUser?.authorId}?tab=reviews&listingId=${selectedDialog.listingId}`)
+                      }
+                    >
+                      Оставить отзыв
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setComplaintTargetId(otherUser?.authorId || null);
+                        setComplaintOpen(true);
+                      }}
+                    >
+                      Пожаловаться
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -331,6 +365,15 @@ const DialogsPage: React.FC = () => {
           }}
         />
       )}
+
+      {complaintTargetId && (
+        <ComplaintModal
+          open={complaintOpen}
+          onClose={() => setComplaintOpen(false)}
+          userId={complaintTargetId}
+        />
+      )}
+
     </div>
   );
 };
