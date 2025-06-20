@@ -50,7 +50,6 @@ const DialogsPage: React.FC = () => {
   const isOwner = selectedDialog?.listingOwnerId === user?.id;
   // const otherUser = isOwner ? messages.find(m => m.authorId !== user?.id) : null;
   const otherUser = messages.find(m => m.authorId !== user?.id);
-  console.log({messages, otherUser})
 
   const handleApproveExchange = async (exchangeId: number) => {
     try {
