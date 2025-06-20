@@ -56,6 +56,7 @@ const BookList: React.FC = () => {
       genreIds: genreId ? [parseInt(genreId)] : undefined,
       condition: condition !== '' ? (condition as ListingFilterDto['condition']) : undefined,
       cityId: cityObj?.id || undefined,
+      isBlocked: false,
     };
 
     const res = await api.post(`${API.LISTINGS.FILTER}?page=${page}&size=${PAGE_SIZE}`, filters);
