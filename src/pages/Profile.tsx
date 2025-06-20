@@ -13,13 +13,15 @@ import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import CoverImage from '@/components/CoverImage.tsx';
 import ReviewSection from '@/components/ReviewSection.tsx';
 import ComplaintModal from '@/components/ComplaintModal';
+import { Pencil } from 'lucide-react';
+import EditListingModal from "@/components/EditListingModal";
+
 
 const PAGE_SIZE = 6;
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const { userId: paramUserId } = useParams();
-  const navigate = useNavigate();
   const userId = paramUserId ? Number(paramUserId) : user?.id;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,6 +38,7 @@ const Profile: React.FC = () => {
   const [complaintOpen, setComplaintOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmCloseId, setConfirmCloseId] = useState<number | null>(null);
+  const [editListingId, setEditListingId] = useState<number | null>(null);
 
   const [confirmRemoveWantedId, setConfirmRemoveWantedId] = useState<number | null>(null);
   const handleRemoveWanted = async () => {
@@ -185,29 +188,29 @@ const Profile: React.FC = () => {
               </button>
             </div>
           )}
-          {user?.id === userData.id && userData.avatarUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                try {
-                  await api.delete('/api/auth/avatar');
-                  setUserData({
-                    ...userData,
-                    avatarUrl: undefined
-                  });
-                } catch {
-                  alert('Ошибка при удалении');
-                }
-              }}
-            >
-              Удалить аватар
-            </Button>
-          )}
-
-          {user?.id === userData.id && (
-            <Button onClick={() => setEditOpen(true)}>Редактировать</Button>
-          )}
+          <div className="flex flex-col gap-2">
+            {user?.id === userData.id && (
+              <Button onClick={() => setEditOpen(true)}>Редактировать</Button>
+            )}
+            {user?.id === userData.id && userData.avatarUrl && (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await api.delete('/api/auth/avatar');
+                    setUserData({
+                      ...userData,
+                      avatarUrl: undefined
+                    });
+                  } catch {
+                    alert('Ошибка при удалении');
+                  }
+                }}
+              >
+                Удалить аватар
+              </Button>
+            )}
+          </div>
 
         </CardContent>
       </Card>
@@ -254,13 +257,22 @@ const Profile: React.FC = () => {
                   )}
                 >
                   {user?.id === item.owner.id && item.isOpen && (
-                    <button
-                      onClick={() => setConfirmCloseId(item.id)}
-                      className="absolute top-2 right-2 z-20 bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
-                      title="Закрыть объявление"
-                    >
-                      ×
-                    </button>
+                    <div className="absolute top-2 right-2 z-20 flex gap-1">
+                      <button
+                        onClick={() => setEditListingId(item.id)}
+                        className="bg-white text-gray-700 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
+                        title="Редактировать"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmCloseId(item.id)}
+                        className="bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
+                        title="Закрыть объявление"
+                      >
+                        ×
+                      </button>
+                    </div>
                   )}
 
                   <div className="relative">
@@ -305,7 +317,7 @@ const Profile: React.FC = () => {
                   {user?.id === userData.id && book.id !== undefined && (
                     <button
                       onClick={() => setConfirmRemoveWantedId(book.id)}
-                      className="absolute top-2 right-2 z-20 bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100"
+                      className="absolute top-2 right-2 z-20 bg-white text-red-500 border border-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-gray-100 cursor-pointer"
                       title="Удалить из хотелок"
                     >
                       ×
@@ -401,6 +413,22 @@ const Profile: React.FC = () => {
           </div>
         </div>
       )}
+      {editListingId !== null && (
+        <EditListingModal
+          listingId={editListingId}
+          open={true}
+          onClose={() => setEditListingId(null)}
+          initialCondition={listings.find(l => l.id === editListingId)?.condition ?? 'GOOD'}
+          initialCityName={listings.find(l => l.id === editListingId)?.city.name ?? ''}
+          onSuccess={(updated) => {
+            setListings(prev =>
+              prev.map(l => l.id === updated.id ? { ...l, ...updated } : l)
+            );
+            setEditListingId(null);
+          }}
+        />
+      )}
+
     </div>
   );
 };

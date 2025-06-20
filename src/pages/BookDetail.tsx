@@ -9,6 +9,9 @@ import type { ListingDto } from '@/types/dto';
 import { cn } from '@/lib/utils';
 import CoverImage from '@/components/CoverImage';
 import StartDialogModal from '@/components/StartDialogModal';
+import ImageViewerModal from '@/components/ImageViewerModal';
+import EditListingModal from '@/components/EditListingModal';
+
 
 const CONDITIONS = [
   { value: 'NEW', label: 'Новое' },
@@ -26,8 +29,13 @@ const BookDetail: React.FC = () => {
   const [related, setRelated] = useState<ListingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const [dialogModalOpenId, setDialogModalOpenId] = useState<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmCloseId, setConfirmCloseId] = useState<number | null>(null);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +43,7 @@ const BookDetail: React.FC = () => {
         if (!id) return;
         const main = await api.get(API.LISTINGS.DETAIL(Number(id)));
         setListing(main.data);
-
+        setViewerIndex(0);
         const res = await api.post(`${API.LISTINGS.FILTER}?page=0&size=20`, {
           title: main.data.book.title,
           author: main.data.book.author,
@@ -107,17 +115,49 @@ const BookDetail: React.FC = () => {
                 {listing.book.description && (
                   <div className="text-sm text-muted-foreground">{listing.book.description}</div>
                 )}
-              </div>
+                {listing.imageUrls.length > 0 && (
+                  <div className="flex gap-2 mt-2">
+                    {listing.imageUrls.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setViewerIndex(idx);
+                          setViewerOpen(true);
+                        }}
+                        className="w-16 h-16 shrink-0"
+                      >
+                        <img
+                          src={url}
+                          alt={`listing image ${idx + 1}`}
+                          className="object-cover w-16 h-16 rounded border"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+            </div>
               {listing.isOpen && user?.id !== listing.owner.id && (
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={() => setDialogModalOpenId(listing.id)}>
                     Написать сообщение
                   </Button>
-                  <Button asChild>
-                    <a href={`/books/${listing.id}`}>Предложить обмен</a>
+                </div>
+              )}
+              {listing.isOpen && user?.id === listing.owner.id && (
+                <div className="mt-2 flex gap-2">
+                  <Button variant="outline" onClick={() => setEditOpen(true)}>
+                    Редактировать объявление
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setConfirmCloseId(listing.id)}
+                  >
+                    Закрыть
                   </Button>
                 </div>
               )}
+
             </div>
           </div>
         </CardContent>
@@ -178,6 +218,59 @@ const BookDetail: React.FC = () => {
           open={true}
           onClose={() => setDialogModalOpenId(null)}
         />
+      )}
+      {editOpen && (
+        <EditListingModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          listingId={listing.id}
+          initialCondition={listing.condition}
+          initialCityName={listing.city.name}
+          onSuccess={(updated) => setListing(updated)}
+        />
+      )}
+      {viewerOpen && listing.imageUrls.length > 0 && (
+        <ImageViewerModal
+          images={listing.imageUrls}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerOpen(false)}
+          open={viewerOpen}
+        />
+      )}
+      {confirmCloseId !== null && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl space-y-4 w-full max-w-sm">
+            <div className="text-lg font-semibold">Закрыть объявление?</div>
+            <div className="text-sm text-muted-foreground">
+              После закрытия пользователи не смогут предлагать обмены по этому объявлению.
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setConfirmCloseId(null)}
+                className="px-4 py-1 text-sm rounded border hover:bg-gray-100"
+              >
+                Нет
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await api.patch(`/api/listings/${confirmCloseId}/close`);
+                    setListing(prev =>
+                      prev && prev.id === confirmCloseId ? { ...prev, isOpen: false } : prev
+                    );
+                  } catch {
+                    alert('Ошибка при закрытии');
+                  } finally {
+                    setConfirmCloseId(null);
+                  }
+                }}
+                className="px-4 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Да
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

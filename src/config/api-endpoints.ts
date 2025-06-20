@@ -52,6 +52,7 @@ export const API = {
     CLOSE: (id: number) => `/api/listings/${id}/close`,
     USER_ALL: (userId: number) => `/api/listings/user/${userId}/all`,
     SEARCH_CITIES: '/api/listings/cities/search',
+    EDIT: (id: number) => `/api/listings/${id}`,
   },
 
   EXCHANGE: {

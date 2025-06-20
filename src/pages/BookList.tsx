@@ -270,9 +270,6 @@ const BookList: React.FC = () => {
                       <div className="mt-2 flex gap-2">
                         <Button variant="outline" onClick={() => setDialogOpen(listing.id)}>Написать сообщение</Button>
                         <StartDialogModal listingId={listing.id} open={dialogOpen === listing.id} onClose={() => setDialogOpen(null)} />
-                        <Button asChild>
-                          <Link to={`/books/${listing.id}`}>Предложить обмен</Link>
-                        </Button>
                       </div>
                     )}
                   </div>
