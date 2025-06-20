@@ -61,6 +61,7 @@ export interface ListingFilterDto {
   genreIds?: number[];
   condition?: 'NEW' | 'LIKE_NEW' | 'GOOD' | 'FAIR' | 'POOR';
   cityId?: number;
+  isBlocked?: boolean;
 }
 
 export interface PageListingDto {

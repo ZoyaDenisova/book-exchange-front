@@ -12,7 +12,7 @@ import ExchangeRequests from './pages/ExchangeRequests';
 import Profile from './pages/Profile';
 import EditBook from "./pages/EditBook";
 import DialogsPage from "@/pages/DialogsPage.tsx";
-
+import AdminPanel from './pages/AdminPanel';
 
 const App: React.FC = () => {
   return (
@@ -32,6 +32,7 @@ const App: React.FC = () => {
             <Route path="/exchanges" element={<ExchangeRequests />} />
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/dialogs" element={<DialogsPage />} />
+            <Route path="/admin/*" element={<AdminPanel />} />
           </Routes>
         </main>
       </div>
