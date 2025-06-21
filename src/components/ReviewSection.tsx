@@ -11,6 +11,8 @@ import CoverImage from './CoverImage';
 import ImagePicker from './ImagePicker';
 import ImageViewerModal from './ImageViewerModal';
 import type { ReviewDto, ListingDto } from '@/types/dto.ts';
+import { useAuth } from '../context/AuthContext';
+
 
 const ReviewSection: React.FC<{ userId: number }> = ({ userId }) => {
   const [searchParams] = useSearchParams();
@@ -27,6 +29,8 @@ const ReviewSection: React.FC<{ userId: number }> = ({ userId }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const { user } = useAuth();
+  const isOwnProfile = user?.id === userId;
 
   const loadReviews = async () => {
     try {
@@ -88,57 +92,57 @@ const ReviewSection: React.FC<{ userId: number }> = ({ userId }) => {
   return (
     <div className="space-y-6">
       {/* форма */}
-      <div className="border p-4 rounded-xl space-y-4 shadow-sm">
-        <h3 className="text-lg font-semibold">Оставить отзыв</h3>
+      {!isOwnProfile && <div className="border p-4 rounded-xl space-y-4 shadow-sm">
+          <h3 className="text-lg font-semibold">Оставить отзыв</h3>
 
-        <div className="space-y-2">
-          <Label>Объявление</Label>
-          {selectedListing ? (
-            <div className="flex items-center gap-4">
-              <CoverImage
-                src={selectedListing.book.imageUrl}
-                className="w-12 h-16 object-cover rounded"
-              />
-              <div className="text-sm">
-                <div className="font-medium">{selectedListing.book.title}</div>
-                <div className="text-muted-foreground text-xs">{selectedListing.book.author}</div>
+          <div className="space-y-2">
+              <Label>Объявление</Label>
+            {selectedListing ? (
+              <div className="flex items-center gap-4">
+                <CoverImage
+                  src={selectedListing.book.imageUrl}
+                  className="w-12 h-16 object-cover rounded"
+                />
+                <div className="text-sm">
+                  <div className="font-medium">{selectedListing.book.title}</div>
+                  <div className="text-muted-foreground text-xs">{selectedListing.book.author}</div>
+                </div>
+                {!prefilledListingId && (
+                  <Button variant="ghost" onClick={() => setSelectedListing(null)}>
+                    Сменить
+                  </Button>
+                )}
               </div>
-              {!prefilledListingId && (
-                <Button variant="ghost" onClick={() => setSelectedListing(null)}>
-                  Сменить
-                </Button>
-              )}
-            </div>
-          ) : (
-            !prefilledListingId && (
-              <Button onClick={() => setSelectorOpen(true)}>Выбрать объявление пользователя</Button>
-            )
-          )}
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <Label>Комментарий</Label>
-            <Textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} />
+            ) : (
+              !prefilledListingId && (
+                <Button onClick={() => setSelectorOpen(true)}>Выбрать объявление пользователя</Button>
+              )
+            )}
           </div>
-          <div className="w-full md:w-32">
-            <Label>Оценка</Label>
-            <select
-              value={rating}
-              onChange={e => setRating(+e.target.value)}
-              className="w-full border rounded-md px-2 py-2"
-            >
-              {[5, 4, 3, 2, 1].map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
+
+          <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                  <Label>Комментарий</Label>
+                  <Textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} />
+              </div>
+              <div className="w-full md:w-32">
+                  <Label>Оценка</Label>
+                  <select
+                      value={rating}
+                      onChange={e => setRating(+e.target.value)}
+                      className="w-full border rounded-md px-2 py-2"
+                  >
+                    {[5, 4, 3, 2, 1].map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+              </div>
           </div>
-        </div>
 
-        <ImagePicker images={images} setImages={setImages} />
+          <ImagePicker images={images} setImages={setImages} />
 
-        <Button onClick={handleAddReview}>Оставить отзыв</Button>
-      </div>
+          <Button onClick={handleAddReview}>Оставить отзыв</Button>
+      </div>}
 
       {/* список отзывов */}
       <div className="space-y-4">

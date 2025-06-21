@@ -298,17 +298,6 @@ const AddBook: React.FC = () => {
           </select>
         </div>
         <div>
-          <Label className="block mb-2">Жанр</Label>
-          <select
-            value={selectedGenres}
-            onChange={(e) => setSelectedGenres(e.target.value)}
-            className="w-full border rounded-md px-2 py-2"
-          >
-            <option value="">Выберите жанр</option>
-            {genres.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-        </div>
-        <div>
           <Label className="block mb-2">Прикрепить фото</Label>
           <Input
             type="file"
@@ -396,6 +385,17 @@ const AddBook: React.FC = () => {
                     {a.label}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <Label className="block mb-2">Жанр</Label>
+              <select
+                value={selectedGenres}
+                onChange={(e) => setSelectedGenres(e.target.value)}
+                className="w-full border rounded-md px-2 py-2"
+              >
+                <option value="">Выберите жанр</option>
+                {genres.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
             <div>

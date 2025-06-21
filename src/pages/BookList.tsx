@@ -31,6 +31,7 @@ const BookList: React.FC = () => {
   const [condition, setCondition] = useState('');
   const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState<number | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
 
   const [titleOptions, setTitleOptions] = useState<string[]>([]);
   const [authorOptions, setAuthorOptions] = useState<string[]>([]);
@@ -48,14 +49,14 @@ const BookList: React.FC = () => {
   }, [page]);
 
   const fetchListings = async () => {
-    const cityObj = cityOptions.find(c => city.toLowerCase().includes(c.name.toLowerCase()));
+    const cityObj = cityOptions.find(c => c.name.toLowerCase() === city.toLowerCase());
 
     const filters: ListingFilterDto = {
       title: title || undefined,
       author: author || undefined,
       genreIds: genreId ? [parseInt(genreId)] : undefined,
       condition: condition !== '' ? (condition as ListingFilterDto['condition']) : undefined,
-      cityId: cityObj?.id || undefined,
+      cityId: selectedCityId || undefined,
       isBlocked: false,
     };
 
@@ -160,8 +161,16 @@ const BookList: React.FC = () => {
             id="city"
             value={city}
             onChange={(e) => {
-              setCity(e.target.value);
-              if (e.target.value.length >= 1) fetchCityOptions(e.target.value);
+              const value = e.target.value;
+              setCity(value);
+
+              if (value.trim() === '') {
+                setSelectedCityId(null);
+              }
+
+              if (value.length >= 1) {
+                fetchCityOptions(value);
+              }
             }}
             onFocus={() => {
               setTitleOptions([]);
@@ -176,6 +185,7 @@ const BookList: React.FC = () => {
                   key={c.id}
                   onClick={() => {
                     setCity(c.name);
+                    setSelectedCityId(c.id);
                     setCityOptions([]);
                   }}
                   className="px-4 py-2 hover:bg-accent cursor-pointer"

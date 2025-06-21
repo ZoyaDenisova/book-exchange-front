@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { API } from '../config/api-endpoints';
 import { useAuth } from '../context/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import {useSearchParams, useNavigate, Link} from 'react-router-dom';
 import ImagePicker from '@/components/ImagePicker';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { Button } from '@/components/ui/button';
@@ -175,32 +175,43 @@ const DialogsPage: React.FC = () => {
         {selectedDialog ? (
           <>
             <div className="border-b p-4 flex justify-between items-start gap-4">
-              <div className="flex gap-4">
-                <CoverImage src={selectedDialog.bookImageUrl} className="w-20 h-28 rounded" />
+              <Link
+                to={`/books/${selectedDialog.listingId}`}
+                className="flex gap-4 hover:bg-accent/30 p-1 rounded transition"
+              >
+                <CoverImage src={selectedDialog.bookImageUrl || '/default-cover.jpg'} className="w-20 h-28 rounded" />
                 <div className="space-y-1 mt-1">
-                  <div className="font-semibold">{selectedDialog.bookTitle}</div>
+                  <div className="font-semibold hover:underline">{selectedDialog.bookTitle}</div>
                   <div className="text-sm text-muted-foreground">{selectedDialog.bookAuthor}</div>
                 </div>
-              </div>
+              </Link>
               <div className="flex items-center gap-2 ml-auto">
                 <div className="text-right mr-2">
                   <div className="font-medium">
-                    {isOwner ? otherUser?.authorName : selectedDialog.listingOwnerName}
+                    <Link
+                      to={`/profile/${isOwner ? otherUser?.authorId : selectedDialog.listingOwnerId}`}
+                      className="hover:underline"
+                    >
+                      {isOwner ? otherUser?.authorName : selectedDialog.listingOwnerName}
+                    </Link>
                   </div>
                 </div>
                 <img
-                  src={selectedDialog.listingOwnerAvatar || '/default-avatar.jpg'}
+                  src={
+                    isOwner
+                      ? otherUser?.authorAvatarUrl || '/default-avatar.jpg'
+                      : selectedDialog.listingOwnerAvatar || '/default-avatar.jpg'
+                  }
                   alt="avatar"
                   className="w-8 h-8 rounded-full object-cover"
                 />
-                <DropdownMenu
-                  trigger={<Button size="icon" variant="ghost">⋮</Button>}
-                  align="right"
-                >
+                <DropdownMenu trigger={<Button size="icon" variant="ghost">⋮</Button>} align="right">
                   <DropdownMenuContent>
                     <DropdownMenuItem
                       onClick={() =>
-                        navigate(`/profile/${otherUser?.authorId}?tab=reviews&listingId=${selectedDialog.listingId}`)
+                        navigate(
+                          `/profile/${otherUser?.authorId}?tab=reviews&listingId=${selectedDialog.listingId}`
+                        )
                       }
                     >
                       Оставить отзыв
@@ -216,6 +227,7 @@ const DialogsPage: React.FC = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+
             </div>
 
             <div className="flex-1 overflow-y-auto flex flex-col-reverse p-4 gap-4" onScroll={e => {

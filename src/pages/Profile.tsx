@@ -234,7 +234,7 @@ const Profile: React.FC = () => {
           {user?.id === userData.id && (
             <div className="flex gap-2">
               <Button asChild>
-                <Link to="/book/add">Добавить объявление</Link>
+                <Link to="/books/add">Добавить объявление</Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/wanted/add">Добавить хотелку</Link>

@@ -133,7 +133,7 @@ const ExchangeRequests: React.FC = () => {
 
               {/* за что предлагают */}
               <div className="flex-1">
-                <div className="text-sm font-medium mb-1 text-muted-foreground">За</div>
+                <div className="text-sm font-medium mb-1 text-muted-foreground">В обмен на</div>
                 <div className="flex gap-3">
                   <CoverImage
                     src={r.selectedListing.book.imageUrl}
